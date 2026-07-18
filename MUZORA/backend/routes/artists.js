@@ -58,9 +58,23 @@ router.post('/', protect, adminOnly, (req, res, next) => {
   }
 });
 
-router.patch('/:id', protect, adminOnly, async (req, res) => {
+router.patch('/:id', protect, adminOnly, (req, res, next) => {
+  uploadArtistImage(req, res, (err) => {
+    if (err) return res.status(400).json({ error: err.message });
+    next();
+  });
+}, async (req, res) => {
   try {
-    const artist = await Artist.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const updates = { ...req.body };
+    if (updates.genres && typeof updates.genres === 'string') {
+      updates.genres = updates.genres.split(',').map((g) => g.trim()).filter(Boolean);
+    }
+    if (updates.verified !== undefined) {
+      updates.verified = updates.verified === 'true' || updates.verified === true;
+    }
+    if (req.file) updates.imageUrl = req.file.path;
+
+    const artist = await Artist.findByIdAndUpdate(req.params.id, updates, { new: true });
     if (!artist) return res.status(404).json({ error: 'Artist not found' });
     res.json({ artist });
   } catch (err) {

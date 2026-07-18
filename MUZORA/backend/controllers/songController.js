@@ -89,16 +89,19 @@ exports.updateSong = async (req, res) => {
     if (!existing) return res.status(404).json({ error: 'Song not found' });
 
     const oldAlbumId = existing.album ? String(existing.album) : null;
-    const newAlbumId = req.body.album !== undefined ? req.body.album || null : oldAlbumId;
+    const newAlbumId = req.body.album !== undefined ? (req.body.album || null) : oldAlbumId;
 
-    const song = await Song.findByIdAndUpdate(req.params.id, req.body, {
+    const updates = { ...req.body };
+    if (updates.album === '') updates.album = null;
+    if (req.file) updates.coverUrl = req.file.path;
+
+    const song = await Song.findByIdAndUpdate(req.params.id, updates, {
       new: true,
       runValidators: true,
     })
       .populate('artist', 'name')
       .populate('album', 'title');
 
-    // Keep Album.songs in sync if the album assignment changed
     if (newAlbumId !== oldAlbumId) {
       if (oldAlbumId) {
         await Album.findByIdAndUpdate(oldAlbumId, { $pull: { songs: song._id } });

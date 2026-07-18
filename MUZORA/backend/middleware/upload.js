@@ -29,6 +29,15 @@ const artistStorage = new CloudinaryStorage({
   }),
 });
 
+const albumStorage = new CloudinaryStorage({
+  cloudinary,
+  params: async () => ({
+    folder: 'muzora/albums',
+    resource_type: 'image',
+    transformation: [{ width: 500, height: 500, crop: 'fill' }],
+  }),
+});
+
 const uploadSongFiles = multer({
   storage: songStorage,
   limits: { fileSize: 50 * 1024 * 1024 },
@@ -37,9 +46,25 @@ const uploadSongFiles = multer({
   { name: 'cover', maxCount: 1 },
 ]);
 
+// Used for PATCH /songs/:id — only lets you replace the cover, not the audio
+const uploadSongCover = multer({
+  storage: songStorage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+}).single('cover');
+
 const uploadArtistImage = multer({
   storage: artistStorage,
   limits: { fileSize: 10 * 1024 * 1024 },
 }).single('image');
 
-module.exports = { uploadSongFiles, uploadArtistImage };
+const uploadAlbumCover = multer({
+  storage: albumStorage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+}).single('cover');
+
+module.exports = {
+  uploadSongFiles,
+  uploadSongCover,
+  uploadArtistImage,
+  uploadAlbumCover,
+};

@@ -3,6 +3,7 @@ const router = express.Router();
 const Album = require('../models/Album');
 const Song = require('../models/Song');
 const { protect, adminOnly } = require('../middleware/auth');
+const { uploadAlbumCover } = require('../middleware/upload');
 
 router.get('/', async (req, res) => {
   try {
@@ -39,9 +40,17 @@ router.post('/', protect, adminOnly, async (req, res) => {
   }
 });
 
-router.patch('/:id', protect, adminOnly, async (req, res) => {
+router.patch('/:id', protect, adminOnly, (req, res, next) => {
+  uploadAlbumCover(req, res, (err) => {
+    if (err) return res.status(400).json({ error: err.message });
+    next();
+  });
+}, async (req, res) => {
   try {
-    const album = await Album.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const updates = { ...req.body };
+    if (req.file) updates.coverUrl = req.file.path;
+
+    const album = await Album.findByIdAndUpdate(req.params.id, updates, { new: true });
     if (!album) return res.status(404).json({ error: 'Album not found' });
     res.json({ album });
   } catch (err) {

@@ -5,7 +5,7 @@ const {
   updateSong, deleteSong, incrementPlays,
 } = require('../controllers/songController');
 const { protect, adminOnly } = require('../middleware/auth');
-const { uploadSongFiles }    = require('../middleware/upload');
+const { uploadSongFiles, uploadSongCover } = require('../middleware/upload');
 
 router.get('/', getAllSongs);
 router.get('/trending', async (req, res) => {
@@ -64,7 +64,6 @@ router.get('/recommended', protect, async (req, res) => {
       .map((r) => r.song)
       .filter(Boolean);
 
-    // Get genres from recently played
     const genres = [...new Set(recentSongs.map((s) => s.genre).filter(Boolean))];
     const likedIds = user.likedSongs.map(String);
     const recentIds = recentSongs.map((s) => String(s._id));
@@ -83,7 +82,6 @@ router.get('/recommended', protect, async (req, res) => {
         .limit(10);
     }
 
-    // Fallback to trending if not enough
     if (songs.length < 5) {
       const trending = await Song.find({
         isPublished: true,
@@ -112,7 +110,13 @@ router.post('/', protect, adminOnly, (req, res, next) => {
   });
 }, uploadSong);
 
-router.patch('/:id', protect, adminOnly, updateSong);
+router.patch('/:id', protect, adminOnly, (req, res, next) => {
+  uploadSongCover(req, res, (err) => {
+    if (err) return res.status(400).json({ error: err.message });
+    next();
+  });
+}, updateSong);
+
 router.delete('/:id', protect, adminOnly, deleteSong);
 
 module.exports = router;
